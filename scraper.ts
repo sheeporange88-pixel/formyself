@@ -41,8 +41,8 @@ export async function fetchAllProducts(url: string) {
     const page = await browser.newPage();
 
     // 慢网速：统一加大默认超时时间
-    page.setDefaultTimeout(120000);
-    page.setDefaultNavigationTimeout(120000);
+    page.setDefaultTimeout(12000);
+    page.setDefaultNavigationTimeout(12000);
 
     // 拦截请求，禁用图片/媒体/字体，减轻 1M 带宽压力
     await page.setRequestInterception(true);
@@ -116,7 +116,7 @@ export async function fetchAllProducts(url: string) {
       });
 
       // 1M 带宽下，每次滚动后多等一会儿（可视情况调成 3000~6000）
-      await delay(4000);
+      await delay(1000);
       scrollTimes++;
 
       const count = await page.evaluate(
@@ -138,32 +138,38 @@ export async function fetchAllProducts(url: string) {
     }
 
     // 滚动结束后，再额外等几秒，确保最后一屏加载完成
-    await delay(3000);
+    await delay(1000);
 
-    // === 抓取数据（适配 Outlet 结构） ===
-    products = await page.evaluate(() => {
-      const list: any[] = [];
-      document.querySelectorAll("a.qa--product-tile__link").forEach((el) => {
-        const nameEl = el.querySelector(".sc-c100b712-307") as HTMLElement;
-        const priceEl =
-          (el.querySelector(".qa--product-tile__price") as HTMLElement) ||
-          (el.querySelector(
-            ".qa--product-tile__original-price"
-          ) as HTMLElement);
+ 
+  // === 抓取数据（适配 Outlet 结构） ===
+products = await page.evaluate(() => {
+  const list: any[] = [];
 
-        const name = nameEl?.innerText?.trim();
-        const price = priceEl?.innerText?.trim();
-        const href = (el as HTMLAnchorElement)?.getAttribute("href");
+  document.querySelectorAll("a.qa--product-tile__link").forEach((el) => {
+    // Name：使用 product-tile-name
+    const nameEl = el.querySelector(".product-tile-name") as HTMLElement;
 
-        if (name && price && href)
-          list.push({
-            name,
-            price,
-            link: `https://arcteryx.com${href}`,
-          });
+    // Price：使用 qa--product-tile__original-price
+    const priceEl = el.querySelector(
+      ".qa--product-tile__original-price"
+    ) as HTMLElement;
+
+    const name = nameEl?.innerText?.trim();
+    const price = priceEl?.innerText?.trim();
+    const href = (el as HTMLAnchorElement)?.getAttribute("href");
+
+    if (name && price && href) {
+      list.push({
+        name,
+        price,
+        link: `https://arcteryx.com${href}`,
       });
-      return list;
-    });
+    }
+  });
+
+  return list;
+});
+
 
     console.log(`✅ 共抓取到 ${products.length} 个商品`);
 
